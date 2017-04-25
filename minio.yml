@@ -1,0 +1,62 @@
+kernel:
+  image: "linuxkit/kernel:4.9.x"
+  cmdline: "console=ttyS0"
+init:
+  - linuxkit/init:63eed9ca7a09d2ce4c0c5e7238ac005fa44f564b
+  - linuxkit/runc:b0fb122e10dbb7e4e45115177a61a3f8d68c19a9
+  - linuxkit/containerd:18eaf72f3f4f9a9f29ca1951f66df701f873060b
+  - linuxkit/ca-certificates:eabc5a6e59f05aa91529d80e9a595b85b046f935
+onboot:
+  - name: sysctl
+    image: "linuxkit/sysctl:1f5ec5d5e6f7a7a1b3d2ff9dd9e36fd6fb14756a"
+    net: host
+    pid: host
+    ipc: host
+    capabilities:
+     - CAP_SYS_ADMIN
+    readonly: true
+  - name: sysfs
+    image: linuxkit/sysfs:6c1d06f28ddd9681799d3950cddf044b930b221c
+  - name: dhcpcd
+    image: "linuxkit/dhcpcd:48e249ebef6a521eed886b3bce032db69fbb4afa"
+    binds:
+     - /var:/var
+     - /tmp:/etc
+    capabilities:
+     - CAP_NET_ADMIN
+     - CAP_NET_BIND_SERVICE
+     - CAP_NET_RAW
+    net: host
+    command: ["/sbin/dhcpcd", "--nobackground", "-f", "/dhcpcd.conf", "-1"]
+  - name: format
+    image: "linuxkit/format:53748000acf515549d398e6ae68545c26c0f3a2e"
+    binds:
+     - /dev:/dev
+    capabilities:
+     - CAP_SYS_ADMIN
+     - CAP_MKNOD
+  - name: mount
+    image: "linuxkit/mount:d2669e7c8ddda99fa0618a414d44261eba6e299a"
+    binds:
+     - /dev:/dev
+     - /var:/var:rshared,rbind
+    capabilities:
+     - CAP_SYS_ADMIN
+    rootfsPropagation: shared
+    command: ["/mount.sh", "/var/exports"]
+services:
+  - name: minio
+    image: "minio/minio:edge"
+    capabilities:
+     - all
+    net: host
+    pid: host
+    binds:
+     - /var/exports:/var/exports
+     - /etc/resolv.conf:/etc/resolv.conf
+     - /tmp:/tmp
+    command: ["minio", "server", "/var/exports"]
+outputs:
+  - format: kernel+initrd
+  - format: iso-bios
+  - format: iso-efi
