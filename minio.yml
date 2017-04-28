@@ -47,8 +47,6 @@ onboot:
 services:
   - name: minio
     image: "minio/minio:edge"
-    capabilities:
-     - none
     net: host
     pid: host
     binds:
